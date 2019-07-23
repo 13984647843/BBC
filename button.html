@@ -1,0 +1,461 @@
+<html>
+<head>
+<script>
+var connected = false;
+var services_discovered = false;
+var selected_device;
+var connected_server;
+var notifications_enabled = false;
+LED_SERVICE = 'e95dd91d-251d-470a-a062-fa1922dfa9a8';
+DEVICE_INFORMATION_SERVICE = '0000180a-0000-1000-8000-00805f9b34fb';
+// presence of services and characteristic
+var has_led_service = false;
+var has_led_matrix_state = false;
+var has_device_information_service = false;
+var has_model_name_string = false;
+var flag_temp =[-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1];
+// characteristic UUIDs
+//ACCELEROMETER_DATA = 'e95dca4b-251d-470a-a062-fa1922dfa9a8';
+LED_MATRIX_STATE = 'e95d7b77-251d-470a-a062-fa1922dfa9a8';
+MODEL_NUMBER_STRING = '00002a24-0000-1000-8000-00805f9b34fb';
+// cached characteristics
+//var accelerometer_data;
+var led_matrix_state;
+var model_number_string;
+function discoverDevicesOrDisconnect() {
+console.log("discoverDevicesOrDisconnect: connected=" + 
+connected);
+if (!connected) {
+discoverDevices();
+} else {
+selected_device.gatt.disconnect();
+resetUI();
+}
+}
+function discoverDevices() {
+console.log("discoverDevices");
+var options = {
+filters: [{ namePrefix: 'BBC' }],
+optionalServices: [DEVICE_INFORMATION_SERVICE,  LED_SERVICE]
+}
+navigator.bluetooth.requestDevice(options)
+.then(device => {
+console.log('> Name: ' + 
+device.name);
+console.log('> Id: ' + device.id);
+console.log('> Connected: ' + 
+device.gatt.connected);
+selected_device = device;
+console.log(selected_device);
+connect();
+})
+.catch(error => {
+alert('ERROR: ' + error);
+console.log('ERROR: ' + error);
+});
+}
+function setConnectedStatus(status) {
+connected = status;
+document.getElementById('status_connected').innerHTML = 
+status;
+if (status == true) {
+document.getElementById('btn_scan').innerHTML = 
+"Disconnect";
+} else {
+document.getElementById('btn_scan').innerHTML = 
+"Discover Devices";
+}
+}
+function setDiscoveryStatus(status) {
+services_discovered = status;
+document.getElementById('status_discovered').innerHTML = 
+status;
+}
+function setNotificationsStatus(status) {
+notifications_enabled = status;
+document.getElementById('status_notifications').innerHTML = 
+status;
+}
+function readModelNumber() {
+console.log("readModelNumber");
+// state validation
+if (!connected) {
+alert("Error: Discover and connect to a device before using this function");
+return;
+}
+if (!services_discovered) {
+alert("Error: Service discovery has not yet completed");
+return;
+}
+if (!has_device_information_service) {
+alert("Error: The connected device does not contain the device information service");
+return;
+}
+if (!has_model_name_string) {
+alert("Error: The connected device does not contain the model name string characteristic");
+return;
+}
+model_number_string.readValue()
+.then(value => {
+data = new Uint8Array(value.buffer);
+model_number_string = new TextDecoder("utf-8").decode(data);
+console.log(model_number_string);
+document.getElementById("model_number").innerHTML = model_number_string;
+})
+.catch(error => {
+console.log('Error: ' + error);
+alert('Error: ' + error);
+return;
+});
+}
+
+function randomLEDs() {
+console.log("randomLEDs");
+// state validation
+if (!connected) {
+alert("Error: Discover and connect to a device before using this function");
+return;
+}
+if (!services_discovered) {
+alert("Error: Service discovery has not yet completed");
+return;
+}
+if (!has_led_service) {
+alert("Error: The connected device does not contain the LED service");
+return;
+}
+if (!has_led_matrix_state) {
+alert("Error: The connected device does not contain the LED matrix state characteristic");
+return;
+}
+var led_array = [0, 0, 0, 0, 0];
+led_array[0] = 31;
+led_array[1] = 31;
+led_array[2] = 31;
+led_array[3] = 31;
+led_array[4] = 31;
+var led_matrix_data = new Uint8Array(led_array);
+led_matrix_state.writeValue(led_matrix_data.buffer)
+.then(_ => {
+console.log('LED matrix state changed');
+})
+.catch(error => {
+console.log('Error: ' + error);
+alert('Error: ' + error);
+return;
+});
+}
+function connect() {
+if (connected == false) {
+console.log("connecting");
+selected_device.gatt.connect().then(
+function (server) {
+console.log("Connected to " +
+server.device.id);
+console.log("connected=" + 
+server.connected);
+setConnectedStatus(true);
+connected_server = server;
+selected_device.addEventListener('gattserverdisconnected',
+onDisconnected);
+discoverSvcsAndChars();
+},
+function (error) {
+console.log("ERROR: could not connect - " 
++ error);
+alert("ERROR: could not connect - " + 
+error);
+setConnectedStatus(false);
+});
+}
+}
+function onDisconnected() {
+console.log("onDisconnected");
+resetUI();
+}
+function discoverSvcsAndChars() {
+console.log("discoverSvcsAndChars server=" + 
+connected_server);
+connected_server.getPrimaryServices()
+.then(services => {
+has_accelerometer_service = false;
+has_led_service = false;
+has_device_information_service = false;
+services_discovered = 0;
+service_count = services.length;
+console.log("Got " + service_count + " services");
+services.forEach(service => {
+if (service.uuid == LED_SERVICE) {
+has_led_service = true;
+}
+if (service.uuid == 
+DEVICE_INFORMATION_SERVICE) {
+has_device_information_service = 
+true;
+}
+console.log('Getting Characteristics for service ' + service.uuid);
+service.getCharacteristics().then(characteristics => {
+console.log('> Service: ' + service.uuid);
+services_discovered++;
+characteristics_discovered = 0;
+characteristic_count = characteristics.length;
+characteristics.forEach(characteristic => {
+characteristics_discovered++;console.log('>> Characteristic: ' + characteristic.uuid);
+if (characteristic.uuid == 
+LED_MATRIX_STATE) {
+led_matrix_state = 
+characteristic;
+has_led_matrix_state 
+= true;
+}
+if (characteristic.uuid == 
+MODEL_NUMBER_STRING) {
+model_number_string = 
+characteristic;
+has_model_name_string 
+= true;
+}
+if (services_discovered == 
+service_count && characteristics_discovered == characteristic_count) {
+console.log("FINISHED DISCOVERY");
+setDiscoveryStatus(true);
+}
+});
+});
+});
+});
+}
+function resetUI() {
+setConnectedStatus(false);
+setDiscoveryStatus(false);
+setNotificationsStatus(false);
+document.getElementById('model_number').innerHTML = "";
+document.getElementById('accelerometer_data').innerHTML = "";
+}
+</script>
+<style type="text/css">
+<!--
+.STYLE1 {
+	font-size: xx-large;
+	font-weight: bold;
+}
+-->
+</style>
+</head>
+<body>
+<h1>Web Bluetooth</h1>
+<h2>Status</h2>
+<table border="1">
+<tr>
+<td>
+<b>Connected</b>
+</td>
+<td>
+<b>Service Discovery Completed</b>
+</td>
+<td>
+<b>Notifications</b>
+</td>
+</tr>
+<tr>
+<td id="status_connected">false</td>
+<td id="status_discovered">false</td>
+<td id="status_notifications">false</td>
+</tr>
+</table>
+<h2>Device Discovery and Connection</h2>
+<button id="btn_scan" onClick="discoverDevicesOrDisconnect()">Discover
+Devices</button>
+<hr>
+<h2>Reading and Writing</h2>
+<h3>Read Characteristic - Model Number</h3>
+<button id="btn_read" onClick="readModelNumber()">Read Model 
+Number</button>
+<div id="model_number"></div>
+<h3>Write Characteristic - Randomise Lights</h3>
+<button id="btn_write" onClick="randomLEDs()">Randomise LEDs</button>&ensp;&ensp;
+<button id="btn_write" onClick="randomLEDs()">OFF LEDs</button>
+<hr>
+<p class="STYLE1">led</p>
+
+<div id="accelerometer_data"></div>
+</body>
+<!DOCTYPE html>
+<html>
+ 
+ <head>
+  <meta charset="UTF-8">
+  <title></title>
+  <style type="text/css">
+ 
+   /*table.style1 {
+    border: 1px solid black;
+    border-collapse: collapse;
+	height:300px;
+    width: 300px;
+    text-align: center;
+    font-size: 30px;
+   }*/
+ 
+   td.num {
+    height: 60px;
+    width: 60px;
+    background-color: black;
+   }
+ 
+   td:active {
+    background-color: red;
+   }
+ 
+   .aperation {
+    background-color: rgb(245, 146, 62);
+    color: white;
+   }
+ 
+   #ape {
+    background-color: wheat;
+    color: #000000;
+   }
+  </style>
+ </head>
+ 
+ <body>
+ <div id="">
+   <table width="450" border="1" class="style1">
+	 <tr>
+     <td  class="num">25</td>
+     <td  class="num">24</td>
+     <td  class="num">23</td>
+	 <td  class="num">22</td>
+	 <td  class="num">21</td>
+    </tr>
+	 <tr>
+     <td class="num">20</td>
+     <td class="num">19</td>
+     <td class="num">18</td>
+	 <td class="num">17</td>
+	 <td class="num">16</td>
+    </tr>
+    <tr>
+     <td class="num">15</td>
+     <td class="num">14</td>
+     <td class="num">13</td>
+	 <td class="num">12</td>
+	 <td class="num">11</td>
+    </tr>
+    <tr>
+     <td class="num">10</td>
+     <td class="num">9</td>
+     <td class="num">8</td>
+	 <td class="num">7</td>
+	 <td class="num">6</td>
+    </tr>
+    <tr>
+     <td class="num">5</td>
+     <td class="num">4</td>
+     <td class="num">3</td>
+	 <td class="num">2</td>
+	 <td class="num">1</td>
+    </tr>
+ </table>
+  </div>
+ </body>
+ <script type="text/javascript">
+  //获取数字的集合
+  var nums = document.getElementsByClassName("num");
+  //获取操作符的集合
+  var options = document.getElementsByClassName("aperation");
+  //获取等号
+  var result = document.getElementById("result");
+  //获取归0
+  var clear = document.getElementById("clear");
+  //获取展示框
+  var show = document.getElementById("show");
+  //声明用于保存内容的三个变量
+  var numValue = ""; //存储数字
+  var optionC = ""; //存储操作符
+  var numTemp = ""; //存储暂存值
+  var ji=0;
+  var n=0;
+  var one=0;
+  var two=0;
+  var three=0;
+  var four=0;
+  var five=0;
+  //点击数字键时 触发事件
+  for(var i = 0; i < nums.length; i++) {
+   nums[i].onclick = function() {
+    if(numValue == "0") {
+     numValue = "";
+    }
+	if(numValue != "0") {
+		numValue = "";
+	}
+	numValue += this.innerHTML;
+	ji=parseInt(numValue);
+	ji=ji-1;
+	n=ji;
+	
+	if(0<ji<5)
+	{
+		n=Math.pow(2,ji);
+		one=one-n*flag_temp[ji];
+	}
+ 
+	if(5<ji<11)
+	{
+		n=Math.pow(2,ji-5);
+		two=two-n*flag_temp[ji];
+	}
+	if(10<ji<16)
+	{
+		n=Math.pow(2,ji-10);
+		three=three-n*flag_temp[ji];
+	}
+	if(15<ji<21)
+	{
+		n=Math.pow(2,ji-15);
+		four=four-n*flag_temp[ji];
+	}
+	if(20<ji<26)
+	{
+		n=Math.pow(2,ji-20);
+		five=five-n*flag_temp[ji];
+	}
+	flag_temp[ji]=flag_temp[ji]*(-1);
+
+	
+ 	var led_array = [0, 0, 0, 0, 0];
+	led_array[0] = five;
+	led_array[1] = four;
+	led_array[2] = three;
+	led_array[3] = two;
+	led_array[4] = one;
+	var led_matrix_data = new Uint8Array(led_array);
+	led_matrix_state.writeValue(led_matrix_data.buffer)
+	.then(_ => {
+	console.log('LED matrix state changed');
+	})
+	.catch(error => {
+	console.log('Error: ' + error);
+	alert('Error: ' + error);
+	return;})
+	 }
+  }
+ 
+  //点击操作键触发事件
+  /*for(var i = 0; i < options.length - 1; i++) {
+   options[i].onclick = function() {
+    //先存储之前记录的数字
+    numTemp = numValue;
+    //记录操作符
+    optionC = this.innerHTML;
+    //清除原有记录的数字
+    numValue = "";
+ 
+   }
+  }*/
+
+ </script>
+ 
+</html>
