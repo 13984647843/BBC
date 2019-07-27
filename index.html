@@ -109,6 +109,25 @@ return;
 });
 }
 
+function offLEDs() {
+var led_array = [0, 0, 0, 0, 0];
+led_array[0] = 0;
+led_array[1] = 0;
+led_array[2] = 0;
+led_array[3] = 0;
+led_array[4] = 0;
+var led_matrix_data = new Uint8Array(led_array);
+led_matrix_state.writeValue(led_matrix_data.buffer)
+.then(_ => {
+console.log('LED matrix state changed');
+})
+.catch(error => {
+console.log('Error: ' + error);
+alert('Error: ' + error);
+return;
+});
+}	
+
 function randomLEDs() {
 console.log("randomLEDs");
 // state validation
@@ -273,18 +292,17 @@ Devices</button>
 Number</button>
 <div id="model_number"></div>
 <h3>Write Characteristic - Randomise Lights</h3>
-<button id="btn_write" onClick="randomLEDs()">Randomise LEDs</button>&ensp;&ensp;
-<button id="btn_write" onClick="randomLEDs()">OFF LEDs</button>
+<button id="btn_write" onClick="randomLEDs()">RandomiseLEDs</button>&ensp;&ensp;
+<button id="btn_off" onClick="offLEDs()">OFF LEDs</button>
 <hr>
+</body>
 <p class="STYLE1">led</p>
 
 <div id="accelerometer_data"></div>
-</body>
 <!DOCTYPE html>
-<html>
- 
+
  <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
   <title></title>
   <style type="text/css">
  
@@ -320,42 +338,42 @@ Number</button>
  </head>
  
  <body>
- <div id="">
-   <table width="450" border="1" class="style1">
+ <div  id="">
+   <table width="450" border="1" >
 	 <tr>
-     <td  class="num">25</td>
-     <td  class="num">24</td>
-     <td  class="num">23</td>
-	 <td  class="num">22</td>
-	 <td  class="num">21</td>
+     <td  style="font-size: 0px" class="num">25</td>
+     <td  style="font-size: 0px" class="num">24</td>
+     <td  style="font-size: 0px" class="num">23</td>
+	 <td  style="font-size: 0px" class="num">22</td>
+	 <td  style="font-size: 0px" class="num">21</td>
     </tr>
 	 <tr>
-     <td class="num">20</td>
-     <td class="num">19</td>
-     <td class="num">18</td>
-	 <td class="num">17</td>
-	 <td class="num">16</td>
+     <td style="font-size: 0px" class="num">20</td>
+     <td style="font-size: 0px" class="num">19</td>
+     <td style="font-size: 0px" class="num">18</td>
+	 <td style="font-size: 0px" class="num">17</td>
+	 <td style="font-size: 0px" class="num">16</td>
     </tr>
     <tr>
-     <td class="num">15</td>
-     <td class="num">14</td>
-     <td class="num">13</td>
-	 <td class="num">12</td>
-	 <td class="num">11</td>
+     <td style="font-size: 0px" class="num">15</td>
+     <td style="font-size: 0px" class="num">14</td>
+     <td style="font-size: 0px" class="num">13</td>
+	 <td style="font-size: 0px" class="num">12</td>
+	 <td style="font-size: 0px" class="num">11</td>
     </tr>
     <tr>
-     <td class="num">10</td>
-     <td class="num">9</td>
-     <td class="num">8</td>
-	 <td class="num">7</td>
-	 <td class="num">6</td>
+     <td style="font-size: 0px" class="num">10</td>
+     <td style="font-size: 0px" class="num">9</td>
+     <td style="font-size: 0px" class="num">8</td>
+	 <td style="font-size: 0px" class="num">7</td>
+	 <td style="font-size: 0px" class="num">6</td>
     </tr>
     <tr>
-     <td class="num">5</td>
-     <td class="num">4</td>
-     <td class="num">3</td>
-	 <td class="num">2</td>
-	 <td class="num">1</td>
+     <td style="font-size: 0px" class="num">5</td>
+     <td style="font-size: 0px" class="num">4</td>
+     <td style="font-size: 0px" class="num">3</td>
+	 <td style="font-size: 0px" class="num">2</td>
+	 <td style="font-size: 0px" class="num">1</td>
     </tr>
  </table>
   </div>
@@ -376,12 +394,12 @@ Number</button>
   var optionC = ""; //存储操作符
   var numTemp = ""; //存储暂存值
   var ji=0;
-  var n=0;
   var one=0;
   var two=0;
   var three=0;
   var four=0;
   var five=0;
+  var colors = ['black','red'],index=0;
   //点击数字键时 触发事件
   for(var i = 0; i < nums.length; i++) {
    nums[i].onclick = function() {
@@ -402,7 +420,7 @@ Number</button>
 		one=one-n*flag_temp[ji];
 	}
  
-	if(5<ji<11)
+   if(5<ji<11)
 	{
 		n=Math.pow(2,ji-5);
 		two=two-n*flag_temp[ji];
@@ -412,19 +430,19 @@ Number</button>
 		n=Math.pow(2,ji-10);
 		three=three-n*flag_temp[ji];
 	}
-	if(15<ji<21)
+   if(15<ji<21)
 	{
 		n=Math.pow(2,ji-15);
 		four=four-n*flag_temp[ji];
 	}
-	if(20<ji<26)
+	if(20<ji<25)
 	{
 		n=Math.pow(2,ji-20);
 		five=five-n*flag_temp[ji];
 	}
 	flag_temp[ji]=flag_temp[ji]*(-1);
 
-	
+	num.style.background = colors[index];
  	var led_array = [0, 0, 0, 0, 0];
 	led_array[0] = five;
 	led_array[1] = four;
@@ -439,22 +457,11 @@ Number</button>
 	.catch(error => {
 	console.log('Error: ' + error);
 	alert('Error: ' + error);
-	return;})
+	return;
+	});
 	 }
   }
  
-  //点击操作键触发事件
-  /*for(var i = 0; i < options.length - 1; i++) {
-   options[i].onclick = function() {
-    //先存储之前记录的数字
-    numTemp = numValue;
-    //记录操作符
-    optionC = this.innerHTML;
-    //清除原有记录的数字
-    numValue = "";
- 
-   }
-  }*/
 
  </script>
  
